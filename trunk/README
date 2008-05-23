@@ -1,5 +1,7 @@
-Apache2/AuthPAM version 0.01
-===========================
+Apache2/AuthPAM
+===============
+
+Enable Apache mod_perl2 to use the Authen::PAM module for authentication.
 
 INSTALLATION
 
@@ -9,33 +11,6 @@ To install this module type the following:
    make
    make test
    make install
-
-CONFIGURATION
-
-   # /etc/httpd.conf
-   <Directory /var/www/https/secured-area/>
-     AuthType Basic
-     AuthName "your server account"
-     PerlAuthHandler Apache2::AuthPAM
-     PerlSetVar PAMservice check_user
-     require valid-user
-   </Directory>
-
-   # /etc/pam.d/check_user
-   #%PAM-1.0
-   auth        required    /lib/security/pam_pwdb.so nodelay
-   account     required    /lib/security/pam_pwdb.so
-
-FEATURES
-
-You can select different PAM service name for different directories
-or locations in your web server filesystem space.
-
-BUGS
-
-Apache2::AuthPAM is running as the same user mod_perl is running
-(on RedHat Linux it is apache). It is running without privileges.
-I am working a revision using an auxiliar suid process.
 
 DEPENDENCIES
 
