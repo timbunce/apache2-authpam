@@ -19,13 +19,6 @@ our $VERSION = '0.01';
 
 our $MODNAME = __PACKAGE__;
 
-#
-# I use this global to pass user info to the conversation function
-#   if you know a better way to do it, please tell me and/or fix it.
-#
-our %pw;
-
-# Preloaded methods go here.
 
 sub handler {
   # get object request
@@ -60,12 +53,20 @@ sub handler {
     return SERVER_ERROR;
   }
 
-  # DAMN! I shouldn't use globals this way!
-  $pw{$$}=$pw;
+  my $pam_conversation = sub { # closure with access to $pw
+      my @res;
+      while (@_) {
+          my $msg_type = shift;
+          my $msg = shift;
+          push @res, (0, $pw);
+      }
+      push @res, 0;
+      return @res;
+  };
 
   # start PAM dialog
   my $pamh;
-  my $result = pam_start($service, $username, \&my_conv_func, $pamh);
+  my $result = pam_start($service, $username, $pam_conversation, $pamh);
 
   unless ($result == PAM_SUCCESS) {
     $r->note_basic_auth_failure;
@@ -92,25 +93,11 @@ sub handler {
 
   # Authenticated
   pam_end($pamh, 0);
-  $log->info("$MODNAME: <$username> authenticated by $service", $r->uri);
+  $log->info("$MODNAME: <$username> authenticated by $service ", $r->uri);
 
   return OK;
 }
 
-
-#
-# Conversation Function
-#
-sub my_conv_func {
-  my @res;
-  while(@_) {
-    my $msg_type = shift;
-    my $msg = shift;
-    push @res, (0, $pw{$$});
-  }
-  push @res, 0;
-  return @res;
-}
 
 1;
 __END__
@@ -121,10 +108,14 @@ __END__
   <Directory /var/www/https/secured-area/>
      AuthType Basic
      AuthName "your server account"
-     PerlAuthHandler Apache2::AuthPAM
+     PerlAuthenHandler Apache2::AuthPAM
      PerlSetVar PAMservice check_user
      require valid-user
   </Directory>
+
+The PAMservice value above corresponds to the name of a PAM config file.
+You can use an existing filename, of create a new one with a custom
+configuration. For example:
 
   # /etc/pam.d/check_user
   #%PAM-1.0
@@ -133,7 +124,7 @@ __END__
 
 =head1 DESCRIPTION
 
-This perl module is designed to work with mod_perl and the
+This perl module is designed to work with mod_perl2 and the
 Authen::PAM module.
 
 You can select the PAM service setting the perl var PAMservice
@@ -145,10 +136,11 @@ or locations in your web server filesystem space.
 
 Apache2::AuthPAM works as follows:
 
-First, it calls C<pam_start> with the selected service.
-Second, it calls C<pam_authenticate> with the browser/apache supplied username and password.
-Later, it calls C<pam_acct_mgmt>.
-And finally it calls C<pam_end>.
+  calls pam_start with the selected service.
+  calls pam_authenticate with the browser/apache supplied username and password.
+  calls pam_acct_mgmt.
+  calls pam_end.
+
 If any of the PAM functions fail, Apache2::AuthPAM logs an info level message and returns C<AUTH_REQUIRED>.
 If all PAM functions are succesfull, Apache2::AuthPAM logs an info level message and returns C<OK>.
 
@@ -158,8 +150,6 @@ to use your system password database, you B<MUST> also use B<mod_ssl> or you
 accounts will be easily compromised.
 
 =head1 BUGS
-
-I'am using a global symbol.
 
 Apache2::AuthPAM is running as the same user mod_perl is running
 (on RedHat Linux it is apache). It is running without privileges.
@@ -173,6 +163,7 @@ Tim Bunce L<http://www.tim.bunce.name> based on work by Héctor Daniel Cortés G
 Apache2::AuthPAM is a direct adaptation of Héctor Daniel Cortés González's
 Apache::AuthPAM which was itself a direct adaptation of Demetrios E. Paneras'
 E<lt>dep@media.mit.eduE<gt> Apache::AuthenNISplus. 
+
 Authen::PAM is written by Nikolay Pelov E<lt>nikip@iname.comE<gt>.
 The sample PAM application check_user.c was contribuited by Shane Watts 
 with modifications by AGM.
