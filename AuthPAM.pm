@@ -2,7 +2,7 @@ package Apache2::AuthPAM;
 
 =head1 NAME
 
-Apache::AuthPAM - Authenticate apache request using PAM services
+Apache2::AuthPAM - Authenticate apache request using PAM services
 
 =cut
 
