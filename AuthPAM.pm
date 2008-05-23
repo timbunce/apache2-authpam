@@ -44,7 +44,7 @@ sub handler {
   my $log = $r->log;
 
   # get user name
-  my $username = $r->connection->user;
+  my $username = $r->user;
 
   # avoid blank username
   unless($username) {
